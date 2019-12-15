@@ -4,7 +4,7 @@ import Prelude
 
 import Effect (Effect)
 import Hasyr.Component.HeaderTime (headerTime)
-import Hasyr.Task.Task (taskList)
+import Hasyr.Task.TaskList (taskList)
 import Turbine (Component, component, output, runComponent, (</>))
 import Turbine.HTML as E
 
