@@ -3,14 +3,14 @@ module Hasyr.Task.Task where
 import Prelude
 
 import Data.Array (filter, fold, snoc)
-import Data.Either (Either(..), hush)
-import Data.Maybe (Maybe(..))
+import Data.Either (either)
 import Data.String (trim)
 import Hareactive.Combinators (changes, runAffNow, snapshot, stepTo, time)
 import Hareactive.Combinators as H
 import Hareactive.Types (Behavior, Stream)
 import Hasyr.Task.Apis (getTodosFromFakeServer)
 import Hasyr.Task.Types (Task)
+import Network.RemoteData (RemoteData(..), fromEither)
 import Turbine (Component, component, list, modelView, output, use, withStatic, (</>))
 import Turbine.HTML as E
 import Web.UIEvent.KeyboardEvent as KE
@@ -60,7 +60,8 @@ taskList = component \on -> do
 
   -- Fetch stream on init
   fromServer <- runAffNow getTodosFromFakeServer
-  let fetchResult = stepTo Nothing (fromServer <#> hush)
+  let futureStatus = fromServer <#> (either (const $ Failure "Unknown error") fromEither)
+  let tasksRemoteStatus = stepTo NotAsked futureStatus
 
   items <- H.accum identity [] (
     (
@@ -72,12 +73,10 @@ taskList = component \on -> do
       (\id arr -> filter ((_.id) >>> (_ /= id)) arr)
     ) <>
     (
-      (changes fetchResult) <#>
-      (\maybeTasks arr -> case maybeTasks of
-        Nothing -> arr
-        Just eitherTasks -> case eitherTasks of
-          Left _ -> arr
-          Right tasks -> arr <> tasks
+      (changes tasksRemoteStatus) <#>
+      (\status arr -> case status of
+        Success tasks -> arr <> tasks
+        _ -> arr
       )
     )
   )

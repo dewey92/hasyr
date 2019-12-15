@@ -12,6 +12,7 @@ You can edit this file as you like.
     , "hareactive"
     , "js-timers"
     , "psci-support"
+    , "remotedata"
     , "turbine"
     ]
 , packages = ./packages.dhall
