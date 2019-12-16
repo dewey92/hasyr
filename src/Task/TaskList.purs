@@ -48,12 +48,12 @@ taskList = component \on -> do
   let toggleClose = on.closeMsg
   isError <- H.toggle false toggleOpen toggleClose
 
-  let alert = dynamic (isError <#> \e -> if not e
-    then
-      E.empty `use` (\o -> { close: mempty :: Stream Unit })
-    else
+  let alert = dynamic (isError <#>
+    if _ then
       Message.message { type: Message.Danger, body: tasksRemoteStatus <#> getErrorMsg }
       `use` (\o -> { close: o.close })
+    else
+      E.empty `use` (\o -> { close: mempty :: Stream Unit })
   )
 
   E.section {} (
