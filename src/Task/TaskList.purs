@@ -21,49 +21,49 @@ getErrorMsg :: ∀ a. RemoteData String a -> String
 getErrorMsg (Failure f) = f
 getErrorMsg _ = ""
 
-useDeleteItem :: Behavior (Array { deleteItem :: Stream Number }) -> Now (Stream Number)
+useDeleteItem :: Behavior (Array { deleteItemS :: Stream Number }) -> Now (Stream Number)
 useDeleteItem actions = do
-  let foldedStream = map (map _.deleteItem >>> fold) actions
-  let deleteItem = H.shiftCurrent foldedStream
-  pure deleteItem
+  let foldedS = map (map _.deleteItemS >>> fold) actions
+  let deleteItemS = H.shiftCurrent foldedS
+  pure deleteItemS
 
 useGetTodos :: Now TasksRemoteStatus
 useGetTodos = do
   fromServer <- H.runAffNow getTodosFromFakeServer
-  let futureStatus = fromServer <#> (either (const $ Failure "Unknown error") fromEither)
-  let tasksRemoteStatus = H.stepTo NotAsked futureStatus
-  pure tasksRemoteStatus
+  let remoteStatusF = fromServer <#> (either (const $ Failure "Unknown error") fromEither)
+  let remoteStatusB = H.stepTo NotAsked remoteStatusF
+  pure remoteStatusB
 
 useErrorMessage ::
-  { tasksRemoteStatus :: TasksRemoteStatus
-  , closeMsg :: Stream Unit
+  { tasksRemoteStatusB :: TasksRemoteStatus
+  , closeMsgS :: Stream Unit
   } ->
-  Now (Component (Behavior { close :: Stream Unit }) {})
+  Now (Component (Behavior { closeS :: Stream Unit }) {})
 useErrorMessage deps = do
-  let toggleOpen = H.filter isFailure (H.changes deps.tasksRemoteStatus)
-  let toggleClose = deps.closeMsg
-  isError <- H.toggle false toggleOpen toggleClose
+  let toggleOpenS = H.filter isFailure (H.changes deps.tasksRemoteStatusB)
+  let toggleCloseS = deps.closeMsgS
+  isErrorB <- H.toggle false toggleOpenS toggleCloseS
 
-  let alertComponent = dynamic (isError <#>
+  let alertComponent = dynamic (isErrorB <#>
     if _ then
-      Message.message { type: Message.Danger, body: deps.tasksRemoteStatus <#> getErrorMsg }
-      `use` (\o -> { close: o.close })
+      Message.message { type: Message.Danger, body: getErrorMsg <$> deps.tasksRemoteStatusB }
+      `use` (\o -> { closeS: o.closeS })
     else
-      E.empty `use` (\o -> { close: mempty :: Stream Unit })
+      E.empty `use` (\o -> { closeS: mempty :: Stream Unit })
   )
   pure alertComponent
 
 taskList :: Component {} {}
 taskList = component \on -> do
-  deleteItem <- useDeleteItem on.actions
-  tasksRemoteStatus <- useGetTodos
-  alert <- useErrorMessage { tasksRemoteStatus, closeMsg: on.closeMsg }
+  deleteItemS <- useDeleteItem on.actions
+  tasksRemoteStatusB <- useGetTodos
+  alertC <- useErrorMessage { tasksRemoteStatusB, closeMsgS: on.closeMsgS }
 
   items <- H.accum identity [] (
-    ( on.addItem <#> flip snoc ) <>
-    ( deleteItem <#> (\id arr -> filter ((_.id) >>> (_ /= id)) arr) ) <>
+    ( on.addItemS <#> flip snoc ) <>
+    ( deleteItemS <#> (\id arr -> filter ((_.id) >>> (_ /= id)) arr) ) <>
     (
-      (H.changes tasksRemoteStatus) <#>
+      (H.changes tasksRemoteStatusB) <#>
       (\status arr -> case status of
         Success tasks -> arr <> tasks
         _ -> arr
@@ -72,11 +72,11 @@ taskList = component \on -> do
   )
 
   E.section {} (
-    addTaskForm `use` (\o -> { addItem: o.submit }) </>
-    alert `use` (\bhvr -> { closeMsg: H.shiftCurrent (bhvr <#> _.close) }) </>
+    addTaskForm `use` (\o -> { addItemS: o.submitS }) </>
+    alertC `use` (\bhvr -> { closeMsgS: H.shiftCurrent (bhvr <#> _.closeS) }) </>
     E.div {} (
       E.ul {} (
-        list (\item -> taskItem item `use` (\o -> { deleteItem: o.delete })) items (_.id)
+        list (\item -> taskItem item `use` (\o -> { deleteItemS: o.deleteS })) items (_.id)
           `use` (\o -> { actions: o })
       )
     )

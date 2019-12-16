@@ -23,12 +23,12 @@ type MessageProps = {
   body :: Behavior String
 }
 
-message :: MessageProps -> Component { close :: Stream Unit } {}
+message :: MessageProps -> Component { closeS :: Stream Unit } {}
 message props = component \on -> do
   E.div { class: pure $ "message " <> toClass props.type } (
     E.div { class: pure "message-header" } (
       E.p {} ( E.text "Error" ) </>
-      E.button { class: pure "delete" } E.empty `use` (\o -> { close: o.click })
+      E.button { class: pure "delete" } E.empty `use` (\o -> { closeS: o.click })
     ) </>
     E.div { class: pure "message-body" } (E.textB props.body)
-  ) `output` { close: on.close }
+  ) `output` { closeS: on.closeS }

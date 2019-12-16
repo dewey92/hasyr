@@ -14,20 +14,20 @@ import Web.UIEvent.KeyboardEvent as KE
 isKey :: String -> KE.KeyboardEvent -> Boolean
 isKey key event = (KE.key event) == key
 
-addTaskForm :: Component { taskName :: Behavior String, submit :: Stream Task } {}
+addTaskForm :: Component { taskNameB :: Behavior String, submitS :: Stream Task } {}
 addTaskForm = modelView model view where
   model { keyup, value } = do
-    let onEnterPressed = H.filter (isKey "Enter") keyup
-    let onSubmit = H.filter (trim >>> (_ /= "")) (snapshot value onEnterPressed)
-    let newTask = H.snapshotWith (\name id -> { id, name }) time onSubmit
+    let enterPressedS = H.filter (isKey "Enter") keyup
+    let submitS = H.filter (trim >>> (_ /= "")) (snapshot value enterPressedS)
+    let newTaskS = H.snapshotWith (\name id -> { id, name }) time submitS
 
-    taskName <- H.stepper "" (H.changes value <> (onSubmit $> ""))
+    taskNameB <- H.stepper "" (H.changes value <> (submitS $> ""))
 
-    pure { taskName, submit: newTask }
+    pure { taskNameB, submitS: newTaskS }
   view input =
     E.section {} (
       E.input (
-        { value: input.taskName, class: pure "input" } `withStatic`
+        { value: input.taskNameB, class: pure "input" } `withStatic`
         { placeholder: "What needs to be done?", autofocus: true }
       ) `use` (\o -> { value: o.value, keyup: o.keyup })
     )

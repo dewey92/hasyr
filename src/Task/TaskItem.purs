@@ -7,9 +7,9 @@ import Hasyr.Task.Types (Task)
 import Turbine (Component, modelView, use, (</>))
 import Turbine.HTML as E
 
-taskItem :: Task -> Component { delete :: Stream Number } {}
+taskItem :: Task -> Component { deleteS :: Stream Number } {}
 taskItem props = modelView model view where
-  model input = pure { delete: input.delete $> props.id }
+  model input = pure { deleteS: input.deleteS $> props.id }
   view input =
     E.li {} (
       E.div { class: pure "card has-margin-top-20" } (
@@ -18,7 +18,7 @@ taskItem props = modelView model view where
         ) </>
         E.footer { class: pure "card-footer" } (
           E.span { class: pure "card-footer-item" } (E.text "Edit") </>
-          E.span { class: pure "card-footer-item" } (E.text "Delete") `use` (\o -> { delete: o.click })
+          E.span { class: pure "card-footer-item" } (E.text "Delete") `use` (\o -> { deleteS: o.click })
         )
       )
     )
