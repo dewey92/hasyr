@@ -1235,6 +1235,11 @@ builtin-status-codes@^3.0.0:
   resolved "https://npm.staging.nxdev.nl/builtin-status-codes/-/builtin-status-codes-3.0.0.tgz#85982878e21b98e1c66425e03d0174788f569ee8"
   integrity sha1-hZgoeOIbmOHGZCXgPQF0eI9Wnug=
 
+bulma-helpers@^0.3.8:
+  version "0.3.8"
+  resolved "https://npm.staging.nxdev.nl/bulma-helpers/-/bulma-helpers-0.3.8.tgz#9383f9f4b1cc5604b9b540fc26996294345f95f2"
+  integrity sha512-SZBkcRCKogzYduo9GduLMtYg2SJ7RT0hRWypWXLs48lmqKxiPgj4gWlt4TzUq7fwzhbmVbtFyfWdwvWgIYCKMA==
+
 cache-base@^1.0.1:
   version "1.0.1"
   resolved "https://npm.staging.nxdev.nl/cache-base/-/cache-base-1.0.1.tgz#0a7f46416831c8b662ee36fe4e7c59d76f666ab2"
@@ -4256,6 +4261,11 @@ purgecss@^1.4.0:
     postcss "^7.0.14"
     postcss-selector-parser "^6.0.0"
     yargs "^14.0.0"
+
+purty@^4.5.2:
+  version "4.5.2"
+  resolved "https://npm.staging.nxdev.nl/purty/-/purty-4.5.2.tgz#ffb40e1738031ce994d96ded14987723fe97a566"
+  integrity sha512-Ai0sONNVfGxsd+BfPZlp+uJvcdH/qbSytpBXDbMi6zryw/GXI1cSCI2AsTPsbiU9X+f2bilcL03D1uOg+EAFKw==
 
 q@^1.1.2:
   version "1.5.1"

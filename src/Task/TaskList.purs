@@ -1,16 +1,17 @@
-module Hasyr.Task.TaskList where
+module Hasyr.Task.TaskList (taskList) where
 
 import Prelude
 
 import Data.Array (filter, fold, snoc)
 import Data.Either (either)
-import Hareactive.Combinators (changes, runAffNow, stepTo)
 import Hareactive.Combinators as H
+import Hareactive.Types (Stream)
+import Hasyr.Component.Message as Message
 import Hasyr.Task.AddTaskForm (addTaskForm)
 import Hasyr.Task.Apis (getTodosFromFakeServer)
 import Hasyr.Task.TaskItem (taskItem)
-import Network.RemoteData (RemoteData(..), fromEither)
-import Turbine (Component, component, list, output, use, (</>))
+import Network.RemoteData (RemoteData(..), fromEither, isFailure)
+import Turbine (Component, component, dynamic, list, output, use, (</>))
 import Turbine.HTML as E
 
 taskList :: Component {} {}
@@ -20,9 +21,9 @@ taskList = component \on -> do
   let deleteItem = H.shiftCurrent foldedStream
 
   -- Fetch stream on init
-  fromServer <- runAffNow getTodosFromFakeServer
+  fromServer <- H.runAffNow getTodosFromFakeServer
   let futureStatus = fromServer <#> (either (const $ Failure "Unknown error") fromEither)
-  let tasksRemoteStatus = stepTo NotAsked futureStatus
+  let tasksRemoteStatus = H.stepTo NotAsked futureStatus
 
   items <- H.accum identity [] (
     (
@@ -34,7 +35,7 @@ taskList = component \on -> do
       (\id arr -> filter ((_.id) >>> (_ /= id)) arr)
     ) <>
     (
-      (changes tasksRemoteStatus) <#>
+      (H.changes tasksRemoteStatus) <#>
       (\status arr -> case status of
         Success tasks -> arr <> tasks
         _ -> arr
@@ -42,9 +43,23 @@ taskList = component \on -> do
     )
   )
 
+  -- Error message
+  let toggleOpen = H.filter isFailure (H.changes tasksRemoteStatus)
+  let toggleClose = on.closeMsg
+  isError <- H.toggle false toggleOpen toggleClose
+
+  let alert = dynamic (isError <#> \e -> if not e
+    then
+      E.empty `use` (\o -> { close: mempty :: Stream Unit })
+    else
+      Message.message { type: Message.Danger, body: tasksRemoteStatus <#> getErrorMsg }
+      `use` (\o -> { close: o.close })
+  )
+
   E.section {} (
     addTaskForm `use` (\o -> { addItem: o.submit }) </>
-    E.div { class: pure "content" } (
+    alert `use` (\bhvr -> { closeMsg: H.shiftCurrent (bhvr <#> _.close) }) </>
+    E.div {} (
       E.ul {} (
         list (\item -> taskItem item `use` (\o -> { deleteItem: o.delete })) items (_.id)
           `use` (\o -> { actions: o })
@@ -52,3 +67,6 @@ taskList = component \on -> do
     )
   ) `output` {}
 
+getErrorMsg :: ∀ a. RemoteData String a -> String
+getErrorMsg (Failure f) = f
+getErrorMsg _ = ""

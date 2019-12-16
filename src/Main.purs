@@ -12,14 +12,14 @@ app :: Component {} {}
 app = component \on -> do
   E.div { class: pure "root" } (
     E.div { class: pure "columns" } (
-      E.div { class: pure "column" } ( E.text "") </>
+      E.div { class: pure "column" } E.empty </>
       E.div { class: pure "column is-half" } (
         E.section {} (
           headerTime </>
           taskList
         )
       ) </>
-      E.div { class: pure "column" } ( E.text "" )
+      E.div { class: pure "column" } E.empty
     )
   ) `output` {}
 

@@ -12,7 +12,7 @@ taskItem props = modelView model view where
   model input = pure { delete: input.delete $> props.id }
   view input =
     E.li {} (
-      E.div { class: pure "card" } (
+      E.div { class: pure "card has-margin-top-20" } (
         E.div { class: pure "card-content" } (
           E.p { class: pure "title" } (E.text props.name)
         ) </>

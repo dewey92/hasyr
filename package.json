@@ -6,10 +6,12 @@
   },
   "dependencies": {
     "@funkia/hareactive": "^0.4.0",
-    "@funkia/turbine": "^0.4.0"
+    "@funkia/turbine": "^0.4.0",
+    "bulma-helpers": "^0.3.8"
   },
   "devDependencies": {
     "parcel": "^1.12.4",
+    "purty": "^4.5.2",
     "sass": "^1.23.7"
   }
 }
