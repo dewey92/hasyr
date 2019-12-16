@@ -60,14 +60,8 @@ taskList = component \on -> do
   alert <- useErrorMessage { tasksRemoteStatus, closeMsg: on.closeMsg }
 
   items <- H.accum identity [] (
-    (
-      on.addItem <#>
-      (\task arr -> snoc arr task)
-    ) <>
-    (
-      deleteItem <#>
-      (\id arr -> filter ((_.id) >>> (_ /= id)) arr)
-    ) <>
+    ( on.addItem <#> flip snoc ) <>
+    ( deleteItem <#> (\id arr -> filter ((_.id) >>> (_ /= id)) arr) ) <>
     (
       (H.changes tasksRemoteStatus) <#>
       (\status arr -> case status of
