@@ -38,7 +38,7 @@ useErrorMessage ::
   { tasksRemoteStatusB :: TasksRemoteStatus
   , closeMsgS :: Stream Unit
   } ->
-  Now (Component (Behavior { closeS :: Stream Unit }) {})
+  Now (Component {} { closeMsgS :: Stream Unit })
 useErrorMessage deps = do
   let toggleOpenS = H.filter isFailure (H.changes deps.tasksRemoteStatusB)
   let toggleCloseS = deps.closeMsgS
@@ -51,7 +51,7 @@ useErrorMessage deps = do
     else
       E.empty `use` (\o -> { closeS: mempty :: Stream Unit })
   )
-  pure alertComponent
+  pure $ alertComponent `use` (\bhvr -> { closeMsgS: H.shiftCurrent (bhvr <#> _.closeS) })
 
 taskList :: Component {} {}
 taskList = component \on -> do
@@ -73,7 +73,7 @@ taskList = component \on -> do
 
   E.section {} (
     addTaskForm `use` (\o -> { addItemS: o.submitS }) </>
-    alertC `use` (\bhvr -> { closeMsgS: H.shiftCurrent (bhvr <#> _.closeS) }) </>
+    alertC </>
     E.div {} (
       E.ul {} (
         list (\item -> taskItem item `use` (\o -> { deleteItemS: o.deleteS })) items (_.id)
