@@ -2,7 +2,7 @@ module Hasyr.Task.AddTaskForm (addTaskForm) where
 
 import Prelude
 
-import Data.String (trim)
+import Data.String (null, trim)
 import Hareactive.Combinators (snapshot, time)
 import Hareactive.Combinators as H
 import Hareactive.Types (Behavior, Stream)
@@ -18,7 +18,7 @@ addTaskForm :: Component { taskNameB :: Behavior String, submitS :: Stream Task 
 addTaskForm = modelView model view where
   model { keyup, value } = do
     let enterPressedS = H.filter (isKey "Enter") keyup
-    let submitS = H.filter (trim >>> (_ /= "")) (snapshot value enterPressedS)
+    let submitS = H.filter (not <<< null <<< trim) (snapshot value enterPressedS)
     let newTaskS = H.snapshotWith (\name id -> { id, name }) time submitS
 
     taskNameB <- H.stepper "" (H.changes value <> (submitS $> ""))
