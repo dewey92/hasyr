@@ -11,7 +11,7 @@ import Hasyr.Task.AddTaskForm (addTaskForm)
 import Hasyr.Task.Apis (getTodosFromFakeServer)
 import Hasyr.Task.TaskItem (taskItem)
 import Hasyr.Task.Types (Task)
-import Network.RemoteData (RemoteData(..), fromEither, isFailure)
+import Network.RemoteData (RemoteData(..), fromEither, isFailure, isLoading)
 import Turbine (Component, component, dynamic, list, output, use, (</>))
 import Turbine.HTML as E
 
@@ -31,7 +31,7 @@ useGetTodos :: Now TasksRemoteStatus
 useGetTodos = do
   fromServer <- H.runAffNow getTodosFromFakeServer
   let remoteStatusF = fromServer <#> (either (const $ Failure "Unknown error") fromEither)
-  let remoteStatusB = H.stepTo NotAsked remoteStatusF
+  let remoteStatusB = H.stepTo Loading remoteStatusF
   pure remoteStatusB
 
 useErrorMessage ::
@@ -47,17 +47,27 @@ useErrorMessage deps = do
   let alertComponent = dynamic (isErrorB <#>
     if _ then
       Message.message { type: Message.Danger, body: getErrorMsg <$> deps.tasksRemoteStatusB }
-      `use` (\o -> { closeS: o.closeS })
+      `use` identity
     else
       E.empty `use` (\o -> { closeS: mempty :: Stream Unit })
   )
   pure $ alertComponent `use` (\bhvr -> { closeMsgS: H.shiftCurrent (bhvr <#> _.closeS) })
 
+useLoading :: { tasksRemoteStatusB :: TasksRemoteStatus } -> Now (Component (Behavior {}) {})
+useLoading { tasksRemoteStatusB } = pure $ dynamic (tasksRemoteStatusB <#> \r ->
+  if isLoading r then
+    E.div
+      { class: pure "has-text-weight-semibold is-size-5 has-margin-15 has-text-centered" }
+      (E.text "Loading")
+  else E.div {} E.empty
+)
+
 taskList :: Component {} {}
 taskList = component \on -> do
   deleteItemS <- useDeleteItem on.actions
   tasksRemoteStatusB <- useGetTodos
-  alertC <- useErrorMessage { tasksRemoteStatusB, closeMsgS: on.closeMsgS }
+  loadingC <- useLoading { tasksRemoteStatusB }
+  errMsgC <- useErrorMessage { tasksRemoteStatusB, closeMsgS: on.closeMsgS }
 
   items <- H.accum identity [] (
     ( on.addItemS <#> flip snoc ) <>
@@ -73,11 +83,12 @@ taskList = component \on -> do
 
   E.section {} (
     addTaskForm `use` (\o -> { addItemS: o.submitS }) </>
-    alertC </>
+    errMsgC </>
     E.div {} (
       E.ul {} (
         list (\item -> taskItem item `use` (\o -> { deleteItemS: o.deleteS })) items (_.id)
           `use` (\o -> { actions: o })
-      )
+      ) </>
+      loadingC
     )
   ) `output` {}
