@@ -49,25 +49,27 @@ useErrorMessage deps = do
       Message.message { type: Message.Danger, body: getErrorMsg <$> deps.tasksRemoteStatusB }
       `use` identity
     else
-      E.empty `use` (\o -> { closeS: mempty :: Stream Unit })
+      E.empty `use` (\_ -> { closeS: mempty :: Stream Unit })
   )
   pure $ alertComponent `use` (\bhvr -> { closeMsgS: H.shiftCurrent (bhvr <#> _.closeS) })
 
-useLoading :: { tasksRemoteStatusB :: TasksRemoteStatus } -> Now (Component (Behavior {}) {})
-useLoading { tasksRemoteStatusB } = pure $ dynamic (tasksRemoteStatusB <#> \r ->
-  if isLoading r then
-    E.div
-      { class: pure "has-text-weight-semibold is-size-5 has-margin-15 has-text-centered" }
-      (E.text "Loading")
-  else E.div {} E.empty
-)
+useLoading :: { tasksRemoteStatusB :: TasksRemoteStatus } -> Now (Component {} {})
+useLoading { tasksRemoteStatusB } = do
+  let loadingC = dynamic (tasksRemoteStatusB <#> \r ->
+    if isLoading r then
+      E.div
+        { class: pure "has-text-weight-semibold is-size-5 has-margin-15 has-text-centered" }
+        (E.text "Loading")
+    else E.div {} E.empty
+  )
+  pure $ loadingC `use` (\_ -> {})
 
 taskList :: Component {} {}
 taskList = component \on -> do
-  deleteItemS <- useDeleteItem on.actions
+  deleteItemS        <- useDeleteItem on.actions
   tasksRemoteStatusB <- useGetTodos
-  loadingC <- useLoading { tasksRemoteStatusB }
-  errMsgC <- useErrorMessage { tasksRemoteStatusB, closeMsgS: on.closeMsgS }
+  loadingC           <- useLoading { tasksRemoteStatusB }
+  errMsgC            <- useErrorMessage { tasksRemoteStatusB, closeMsgS: on.closeMsgS }
 
   items <- H.accum identity [] (
     ( on.addItemS <#> flip snoc ) <>
