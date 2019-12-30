@@ -3,23 +3,19 @@ module Hasyr.Task.AddTaskForm (addTaskForm) where
 import Prelude
 
 import Data.String (null, trim)
-import Hareactive.Combinators (snapshot, time)
 import Hareactive.Combinators as H
 import Hareactive.Types (Behavior, Stream)
 import Hasyr.Task.Types (Task)
+import Haysr.Utils (isKey)
 import Turbine (Component, modelView, use, withStatic)
 import Turbine.HTML as E
-import Web.UIEvent.KeyboardEvent as KE
-
-isKey :: String -> KE.KeyboardEvent -> Boolean
-isKey key event = (KE.key event) == key
 
 addTaskForm :: Component { taskNameB :: Behavior String, submitS :: Stream Task } {}
 addTaskForm = modelView model view where
   model { keyup, value } = do
     let enterPressedS = H.filter (isKey "Enter") keyup
-    let submitS = H.filter (not <<< null <<< trim) (snapshot value enterPressedS)
-    let newTaskS = H.snapshotWith (\name id -> { id, name }) time submitS
+    let submitS = H.filter (not <<< null <<< trim) (H.snapshot value enterPressedS)
+    let newTaskS = H.snapshotWith (\name id -> { id, name }) H.time submitS
 
     taskNameB <- H.stepper "" (H.changes value <> (submitS $> ""))
 

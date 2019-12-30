@@ -21,14 +21,20 @@ getErrorMsg :: ∀ a. RemoteData String a -> String
 getErrorMsg (Failure f) = f
 getErrorMsg _ = ""
 
-useDeleteItem :: Behavior (Array { deleteItemS :: Stream Number }) -> Now (Stream Number)
+useEditItem :: ∀ r. Behavior (Array { editItemS :: Stream Task | r }) -> Now (Stream Task)
+useEditItem actions = do
+  let foldedS = map (map _.editItemS >>> fold) actions
+  let editItemS = H.shiftCurrent foldedS
+  pure editItemS
+
+useDeleteItem :: ∀ r. Behavior (Array { deleteItemS :: Stream Number | r }) -> Now (Stream Number)
 useDeleteItem actions = do
   let foldedS = map (map _.deleteItemS >>> fold) actions
   let deleteItemS = H.shiftCurrent foldedS
   pure deleteItemS
 
-useGetTodos :: Now TasksRemoteStatus
-useGetTodos = do
+useGetTasks :: Now TasksRemoteStatus
+useGetTasks = do
   fromServer <- H.runAffNow getTodosFromFakeServer
   let remoteStatusF = fromServer <#> (either (const $ Failure "Unknown error") fromEither)
   let remoteStatusB = H.stepTo Loading remoteStatusF
@@ -49,9 +55,9 @@ useErrorMessage deps = do
       Message.message { type: Message.Danger, body: getErrorMsg <$> deps.tasksRemoteStatusB }
       `use` identity
     else
-      E.empty `use` (\_ -> { closeS: mempty :: Stream Unit })
+      E.empty `use` (\_ -> { closeS: mempty :: _ })
   )
-  pure $ alertComponent `use` (\bhvr -> { closeMsgS: H.shiftCurrent (bhvr <#> _.closeS) })
+  pure $ alertComponent `use` (\b -> { closeMsgS: H.shiftCurrent (b <#> _.closeS) })
 
 useLoading :: { tasksRemoteStatusB :: TasksRemoteStatus } -> Now (Component {} {})
 useLoading { tasksRemoteStatusB } = do
@@ -66,14 +72,19 @@ useLoading { tasksRemoteStatusB } = do
 
 taskList :: Component {} {}
 taskList = component \on -> do
+  tasksRemoteStatusB <- useGetTasks
+  editItemS          <- useEditItem on.actions
   deleteItemS        <- useDeleteItem on.actions
-  tasksRemoteStatusB <- useGetTodos
   loadingC           <- useLoading { tasksRemoteStatusB }
   errMsgC            <- useErrorMessage { tasksRemoteStatusB, closeMsgS: on.closeMsgS }
 
   items <- H.accum identity [] (
     ( on.addItemS <#> flip snoc ) <>
     ( deleteItemS <#> (\id arr -> filter ((_.id) >>> (_ /= id)) arr) ) <>
+    ( editItemS <#> (\newTask arr ->
+        arr <#> (\x -> if x.id == newTask.id then newTask else x)
+      )
+    ) <>
     (
       (H.changes tasksRemoteStatusB) <#>
       (\status arr -> case status of
@@ -88,7 +99,7 @@ taskList = component \on -> do
     errMsgC </>
     E.div {} (
       E.ul {} (
-        list (\item -> taskItem item `use` (\o -> { deleteItemS: o.deleteS })) items (_.id)
+        list (\item -> taskItem item `use` (\o -> { deleteItemS: o.deleteS, editItemS: o.submitEditS })) items (_.id)
           `use` (\o -> { actions: o })
       ) </>
       loadingC
